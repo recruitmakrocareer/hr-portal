@@ -303,9 +303,9 @@
 
 <script>
   /* ====================================================================
-     ตั้งค่า API URL ตรงนี้ (เอา URL จาก Google Apps Script Web App มาใส่)
+     ตั้งค่า API URL ของคุณ (ที่ได้จาก Google Apps Script)
      ==================================================================== */
-  const API_URL = "https://script.google.com/macros/s/xxxxxxxxxxxxxxxxxxxxxxxxxxxxx/exec"; 
+  const API_URL = "https://script.google.com/macros/s/AKfycbwWApA8oJIltAInztigWR3omC1csMour5cO8r2zDlxCFTh2HakbCR_uNqJUBTAnkYSKKg/exec"; 
 
   // --- Core API Caller ---
   async function callAPI(actionName, dataPayload = {}) {
@@ -641,7 +641,7 @@
     new FormData(document.getElementById(formId)).forEach((v, k) => obj[k] = v);
     
     try {
-        const resData = await callAPI(actionName, obj); // ส่งข้อมูลผ่าน API
+        const resData = await callAPI(actionName, obj); 
         document.getElementById('loading').style.display = 'none';
         
         if(resData && resData.result === 'success') {
