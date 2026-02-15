@@ -56,6 +56,12 @@
     .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
     .stat-card { transition: transform 0.2s; border-radius: 12px; }
     .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+    
+    /* Funnel Card Styles */
+    .funnel-card { border: none; border-radius: 10px; color: white; position: relative; overflow: hidden; }
+    .funnel-card h3 { font-weight: 700; font-size: 2.5rem; margin-bottom: 0; }
+    .funnel-card .icon-bg { position: absolute; right: 10px; bottom: 10px; font-size: 4rem; opacity: 0.2; }
+    .funnel-rate { font-size: 0.9rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; }
   </style>
 </head>
 <body>
@@ -94,8 +100,8 @@
         </button>
       </li>
       <li class="nav-item ms-4 border-start ps-4">
-        <button class="nav-link dash-tab text-dark" id="tab-dashboard-btn" data-bs-toggle="pill" data-bs-target="#tab-dashboard" onclick="loadDashboard()">
-          <i class="bi bi-pie-chart-fill me-1"></i> Dashboard
+        <button class="nav-link" id="tab-sales-btn" data-bs-toggle="pill" data-bs-target="#tab-sales" onclick="loadSalesSummary()">
+          <i class="bi bi-graph-up-arrow me-1"></i> Sales Summary
         </button>
       </li>
     </ul>
@@ -215,25 +221,113 @@
         </div>
     </div>
 
-    <div class="tab-pane fade" id="tab-dashboard">
-      <div class="custom-card" style="border: 1px solid #f59e0b;">
-        <div class="card-header-custom" style="border-bottom: 3px solid #f59e0b;">
-          <span class="text-dark fw-bold"><i class="bi bi-graph-up text-warning me-2"></i> สรุปภาพรวมระบบ (All Stores FT)</span>
-          <button class="btn btn-sm btn-outline-dark" onclick="loadDashboard()"><i class="bi bi-arrow-clockwise me-1"></i> อัปเดตข้อมูลล่าสุด</button>
+    <div class="tab-pane fade" id="tab-sales">
+      <div class="custom-card border-primary" style="border: 1px solid #0d6efd;">
+        <div class="card-header-custom" style="border-bottom: 3px solid #0d6efd;">
+          <span class="text-primary fw-bold"><i class="bi bi-briefcase-fill me-2"></i> สรุปข้อมูลผู้สมัคร (Sales Executive)</span>
         </div>
         <div class="card-body p-4">
+          
+          <div class="row g-3 mb-4 bg-light p-3 rounded align-items-end">
+            <div class="col-md-2">
+              <label class="form-label">ตั้งแต่วันที่ (เริ่มงาน)</label>
+              <input type="date" id="salesStartDate" class="form-control">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">ถึงวันที่ (เริ่มงาน)</label>
+              <input type="date" id="salesEndDate" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">ตำแหน่ง (Keyword)</label>
+              <input type="text" id="salesPositionFilter" class="form-control" value="Sales Executive">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">สถานะสัมภาษณ์</label>
+              <select id="salesIntStatusFilter" class="form-select interview-status-select">
+                <option value="">-- ทั้งหมด --</option>
+              </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+              <button class="btn btn-primary w-100" onclick="loadSalesSummary()"><i class="bi bi-search me-1"></i> ประมวลผล</button>
+              <button class="btn btn-success w-100" onclick="exportSalesSummary()"><i class="bi bi-file-earmark-excel me-1"></i> Excel</button>
+              <button class="btn btn-warning w-100" onclick="exportOrientationSheet()" title="Export ใบรายชื่อสำหรับเซ็นเข้าอบรม"><i class="bi bi-file-earmark-text me-1"></i> ใบเซ็นชื่อ</button>
+            </div>
+          </div>
+    
           <div class="row g-4 mb-4">
-            <div class="col-md-4"><div class="card stat-card h-100 border-0 bg-primary text-white shadow"><div class="card-body text-center py-4"><h6 class="fw-bold mb-2 opacity-75">ผู้สมัครทั้งหมด (Total Candidates)</h6><h1 class="display-4 fw-bold mb-0" id="dashTotal">-</h1></div></div></div>
-            <div class="col-md-4"><div class="card stat-card h-100 border-0 bg-info text-dark shadow"><div class="card-body text-center py-4"><h6 class="fw-bold mb-2 opacity-75">ผ่านสัมภาษณ์ (Interview Passed)</h6><h1 class="display-4 fw-bold mb-0" id="dashPass">-</h1></div></div></div>
-            <div class="col-md-4"><div class="card stat-card h-100 border-0 bg-success text-white shadow"><div class="card-body text-center py-4"><h6 class="fw-bold mb-2 opacity-75">มาเริ่มงานแล้ว (Started Working)</h6><h1 class="display-4 fw-bold mb-0" id="dashStart">-</h1></div></div></div>
+            <div class="col-md-4">
+              <div class="card funnel-card bg-primary shadow">
+                <div class="card-body p-4">
+                  <h6>ผู้สมัครทั้งหมด (Total)</h6>
+                  <h3 id="funnelTotal">-</h3>
+                  <i class="bi bi-people-fill icon-bg"></i>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card funnel-card bg-success shadow">
+                <div class="card-body p-4">
+                  <h6>ผ่านสัมภาษณ์ (Passed)</h6>
+                  <div class="d-flex align-items-baseline gap-2">
+                    <h3 id="funnelPassed">-</h3>
+                    <span class="funnel-rate" id="ratePassed">0%</span>
+                  </div>
+                  <i class="bi bi-check-circle-fill icon-bg"></i>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card funnel-card bg-info text-dark shadow">
+                <div class="card-body p-4">
+                  <h6 class="text-white">เริ่มงาน (Hired/Started)</h6>
+                  <div class="d-flex align-items-baseline gap-2 text-white">
+                    <h3 id="funnelHired">-</h3>
+                    <span class="funnel-rate" id="rateHired">0%</span>
+                  </div>
+                  <i class="bi bi-briefcase-fill icon-bg text-white"></i>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="row g-4">
-            <div class="col-md-6"><div class="border rounded p-3 bg-white shadow-sm h-100"><h6 class="fw-bold text-center text-secondary mb-3">สัดส่วนช่องทางการสมัคร (Apply Source)</h6><div style="position: relative; height:300px; width:100%; display: flex; justify-content: center;"><canvas id="sourceChart"></canvas></div></div></div>
-            <div class="col-md-6"><div class="border rounded p-3 bg-white shadow-sm h-100"><h6 class="fw-bold text-center text-secondary mb-3">สรุปสถานะการสัมภาษณ์ (Interview Status)</h6><div style="position: relative; height:300px; width:100%;"><canvas id="statusChart"></canvas></div></div></div>
+
+          <div class="card h-100 shadow-sm border-0 bg-light mb-4">
+            <div class="card-header fw-bold text-dark d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-bar-chart-fill me-1"></i> ผลการสัมภาษณ์รายวัน (คลิกที่แท่งกราฟเพื่อดูรายชื่อ)</span>
+                <button id="resetChartFilterBtn" class="btn btn-sm btn-outline-danger" style="display:none;" onclick="resetChartFilter()">
+                    <i class="bi bi-x-circle me-1"></i> แสดงทั้งหมด
+                </button>
+            </div>
+            <div class="card-body" style="height: 350px;">
+                <canvas id="salesBarChart"></canvas>
+            </div>
           </div>
+    
+          <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-table me-2"></i> รายละเอียดข้อมูลรายบุคคล <span id="tableFilterStatus" class="badge bg-secondary ms-2" style="display:none;"></span></h6>
+          <div class="table-wrapper">
+            <table class="table-pro">
+              <thead>
+                <tr>
+                  <th>วันที่สมัคร</th>
+                  <th>รหัสสาขา</th> 
+                  <th>ชื่อสาขา</th> 
+                  <th>ชื่อ-นามสกุล</th>
+                  <th>ตำแหน่ง</th>
+                  <th>สถานะสัมภาษณ์</th>
+                  <th>วันเริ่มงาน</th>
+                  <th>สถานะเริ่มงาน</th>
+                  <th>รอบอบรม (Orientation)</th>
+                </tr>
+              </thead>
+              <tbody id="salesDetailBody">
+                <tr><td colspan="9" class="text-center py-4">กดปุ่ม "ประมวลผล" เพื่อดูข้อมูล</td></tr>
+              </tbody>
+            </table>
+          </div>
+    
         </div>
       </div>
     </div>
+
   </div>
 </div>
 
@@ -303,11 +397,10 @@
 
 <script>
   /* ====================================================================
-     API URL จาก Google Apps Script (ใส่ข้อมูลของคุณเรียบร้อยแล้ว)
+     API URL
      ==================================================================== */
   const API_URL = "https://script.google.com/macros/s/AKfycbwWApA8oJIltAInztigWR3omC1csMour5cO8r2zDlxCFTh2HakbCR_uNqJUBTAnkYSKKg/exec"; 
 
-  // --- Core API Caller ---
   async function callAPI(actionName, dataPayload = {}) {
       try {
           const response = await fetch(API_URL, {
@@ -330,13 +423,19 @@
   let rawDataFT = [];
   let filteredDataFT = [];
   let currentPageFT = 1;
-  let chartSourceInstance = null;
-  let chartStatusInstance = null;
+  let salesChartInstance = null; 
+  let salesFilteredData = [];
+  let currentChartSortedDates = []; 
 
   window.onload = async function() {
     const today = new Date();
     document.querySelector('#addForm input[name="appDate"]').valueAsDate = today;
     document.querySelector('#addFormPT input[name="ptDate"]').valueAsDate = today;
+
+    const salesStart = document.getElementById('salesStartDate');
+    if(salesStart) salesStart.value = `${today.getFullYear()}-01-01`;
+    const salesEnd = document.getElementById('salesEndDate');
+    if(salesEnd) salesEnd.valueAsDate = today;
 
     try {
         const data = await callAPI("getDropdowns");
@@ -547,71 +646,338 @@
     }
   }
 
-  /* --- DASHBOARD --- */
-  async function loadDashboard() {
-      document.getElementById('loading').style.display = 'block';
-      try {
-          const data = await callAPI("exportData", 'FT');
-          document.getElementById('loading').style.display = 'none';
-          renderDashboardCharts(data);
-      } catch(err) {
-          document.getElementById('loading').style.display = 'none';
-          Swal.fire('Error', 'ไม่สามารถโหลดข้อมูล Dashboard ได้: ' + err.message, 'error');
+  /* =========================================
+     [UPDATED] Logic Sales Summary: Funnel + Interactive Chart + Export Sheet
+     ========================================= */
+  
+  // --- Helper Functions ---
+  function parseThaiDate(dateStr) {
+      if (!dateStr) return null;
+      if (dateStr.includes('-')) return new Date(dateStr);
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+          let d = parseInt(parts[0]);
+          let m = parseInt(parts[1]) - 1; 
+          let y = parseInt(parts[2]);
+          if (y > 2400) y -= 543;
+          return new Date(y, m, d);
       }
+      return new Date(dateStr); 
   }
 
-  function renderDashboardCharts(data) {
-      if (!data || data.length === 0) {
-          Swal.fire('แจ้งเตือน', 'ยังไม่มีข้อมูลในระบบสำหรับการสร้าง Dashboard', 'info');
+  function formatThaiDateShort(dateObj) {
+      if (!dateObj || isNaN(dateObj)) return "-";
+      return dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+  }
+
+  async function loadSalesSummary() {
+    const dateStartInput = document.getElementById('salesStartDate');
+    const dateEndInput = document.getElementById('salesEndDate');
+    const intStatusFilter = document.getElementById('salesIntStatusFilter').value; 
+    
+    if (!dateStartInput.value) { const d = new Date(); dateStartInput.value = `${d.getFullYear()}-01-01`; }
+    if (!dateEndInput.value) { dateEndInput.valueAsDate = new Date(); }
+
+    const keyword = document.getElementById('salesPositionFilter').value.toLowerCase();
+    const filterStartDate = new Date(dateStartInput.value); filterStartDate.setHours(0, 0, 0, 0);
+    const filterEndDate = new Date(dateEndInput.value); filterEndDate.setHours(23, 59, 59, 999);
+
+    document.getElementById('loading').style.display = 'block';
+    
+    // Reset Chart Filter UI
+    document.getElementById('resetChartFilterBtn').style.display = 'none';
+    document.getElementById('tableFilterStatus').style.display = 'none';
+
+    try {
+        const data = await callAPI("exportData", 'FT'); 
+        document.getElementById('loading').style.display = 'none';
+
+        if (!data || data.length === 0) { Swal.fire('แจ้งเตือน', 'ไม่พบข้อมูลในระบบ', 'warning'); return; }
+
+        // 1. กรองข้อมูลหลัก (Filter Logic)
+        salesFilteredData = data.filter(row => {
+            const pos = (row['ตำแหน่ง'] || '').toLowerCase();
+            if (!pos.includes(keyword)) return false;
+
+            const workStartDateStr = row['วันที่เริ่มงาน'];
+            if (!workStartDateStr) return false;
+
+            const workDate = parseThaiDate(workStartDateStr);
+            if (workDate < filterStartDate || workDate > filterEndDate) return false;
+
+            if (intStatusFilter && intStatusFilter !== "") {
+                 const rowIntStatus = row['ผลสัมภาษณ์'] || ''; 
+                 if (rowIntStatus !== intStatusFilter) return false;
+            }
+            return true;
+        });
+
+        // 2. คำนวณ Funnel Stats
+        const total = salesFilteredData.length;
+        let passed = 0;
+        let hired = 0;
+
+        salesFilteredData.forEach(row => {
+            const intStatus = row['ผลสัมภาษณ์'] || '';
+            const startStatus = row['สถานะเริ่มงาน'] || '';
+            
+            if (intStatus.includes('ผ่าน')) passed++;
+            
+            // Fix: นับเฉพาะ "มาเริ่มงาน" เท่านั้น (ตัด "รอเริ่มงาน" ออก)
+            if (startStatus.includes('มาเริ่มงาน')) hired++;
+        });
+
+        document.getElementById('funnelTotal').innerText = total;
+        document.getElementById('funnelPassed').innerText = passed;
+        document.getElementById('ratePassed').innerText = total > 0 ? Math.round((passed/total)*100) + '%' : '0%';
+        document.getElementById('funnelHired').innerText = hired;
+        document.getElementById('rateHired').innerText = total > 0 ? Math.round((hired/total)*100) + '%' : '0%';
+
+        // 3. เตรียมข้อมูลกราฟ & Render Table (Initial)
+        renderSalesTable(salesFilteredData); // Render Table first time
+        renderInteractiveChart(salesFilteredData); // Render Chart
+
+    } catch (err) {
+        document.getElementById('loading').style.display = 'none';
+        console.error(err);
+        Swal.fire('Error', 'เกิดข้อผิดพลาด: ' + err.message, 'error');
+    }
+  }
+
+  // --- Function แยก Render Table เพื่อใช้ซ้ำตอนกดกราฟ ---
+  function renderSalesTable(dataList) {
+      const tbody = document.getElementById('salesDetailBody');
+      const waitStatusKeywords = ['รอเริ่มงาน', 'มาเริ่มงาน'];
+      let tableHtml = '';
+
+      if(dataList.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">ไม่พบข้อมูล</td></tr>';
           return;
       }
-      let passCount = 0; let startCount = 0;
-      let sourceCounts = {}; let statusCounts = {};
 
-      data.forEach(row => {
-          const source = row['ช่องทาง'] || 'ไม่ระบุ';
-          const intStatus = row['ผลสัมภาษณ์'] || 'ยังไม่ระบุ/รอเรียก';
-          const startStatus = row['สถานะเริ่มงาน'] || '';
-          if (intStatus.includes('ผ่าน')) passCount++;
-          if (startStatus.includes('มาเริ่มงาน')) startCount++;
-          sourceCounts[source] = (sourceCounts[source] || 0) + 1;
-          statusCounts[intStatus] = (statusCounts[intStatus] || 0) + 1;
+      dataList.forEach(row => {
+            // คำนวณรอบอบรม
+            const startStatus = row['สถานะเริ่มงาน'] || '';
+            const startDateStr = row['วันที่เริ่มงาน'];
+            let roundDisplay = '-';
+            const isHired = waitStatusKeywords.some(k => startStatus.includes(k));
+            if (isHired && startDateStr) {
+                const sDate = parseThaiDate(startDateStr);
+                const day = sDate.getDate();
+                if (day >= 1 && day <= 16) roundDisplay = '<span class="badge bg-info text-dark">รอบอบรม 16</span>';
+                else if (day >= 17) roundDisplay = '<span class="badge bg-warning text-dark">รอบอบรม 1</span>';
+                else roundDisplay = '<span class="badge bg-secondary">Other</span>';
+            }
+
+            const appDateStr = row['วันที่สมัคร'];
+            const appDateObj = parseThaiDate(appDateStr);
+            const appDateDisplay = (appDateObj && !isNaN(appDateObj)) ? formatThaiDateShort(appDateObj) : (appDateStr || '-');
+            const intStatus = row['ผลสัมภาษณ์'] || '-';
+            const intDateStr = row['วันที่สัมภาษณ์'];
+            const intDateObj = parseThaiDate(intDateStr);
+            const intDateDisplay = (intDateObj && !isNaN(intDateObj)) ? formatThaiDateShort(intDateObj) : (intDateStr || '-');
+            let badgeClass = 'bg-secondary';
+            if (intStatus.includes('ผ่าน')) badgeClass = 'bg-success';
+            else if (intStatus.includes('ไม่ผ่าน')) badgeClass = 'bg-danger';
+
+            // ดึงชื่อสาขาจากหลาย Key
+            const storeName = row['Store_Name'] || row['สาขา'] || row['ชื่อสาขา'] || '-';
+
+            tableHtml += `
+                <tr>
+                    <td>${appDateDisplay}</td>
+                    <td>${row['รหัสสาขา'] || '-'}</td>
+                    <td>${storeName}</td>
+                    <td class="fw-bold text-primary">${row['ชื่อ-นามสกุล']}</td>
+                    <td>${row['ตำแหน่ง']}</td>
+                    <td><span class="badge ${badgeClass}">${intStatus}</span> <small class="text-muted">(${intDateDisplay})</small></td>
+                    <td class="fw-bold text-danger">${startDateStr}</td> 
+                    <td>${startStatus}</td>
+                    <td>${roundDisplay}</td>
+                </tr>
+            `;
       });
+      tbody.innerHTML = tableHtml;
+  }
 
-      document.getElementById('dashTotal').innerText = data.length;
-      document.getElementById('dashPass').innerText = passCount;
-      document.getElementById('dashStart').innerText = startCount;
-
-      const ctxSource = document.getElementById('sourceChart').getContext('2d');
-      if (chartSourceInstance) chartSourceInstance.destroy(); 
-      chartSourceInstance = new Chart(ctxSource, {
-          type: 'doughnut',
-          data: {
-              labels: Object.keys(sourceCounts),
-              datasets: [{
-                  data: Object.values(sourceCounts),
-                  backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b', '#06b6d4'],
-                  borderWidth: 1
-              }]
-          },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
-      });
-
-      const ctxStatus = document.getElementById('statusChart').getContext('2d');
-      if (chartStatusInstance) chartStatusInstance.destroy();
-      const sortedStatus = Object.entries(statusCounts).sort((a, b) => b[1] - a[1]);
+  // --- Function Render Interactive Chart ---
+  function renderInteractiveChart(dataList) {
+      const chartStats = {}; 
+      const allStatuses = new Set();
       
-      chartStatusInstance = new Chart(ctxStatus, {
-          type: 'bar',
-          data: {
-              labels: sortedStatus.map(item => item[0]),
-              datasets: [{ label: 'จำนวนคน', data: sortedStatus.map(item => item[1]), backgroundColor: '#3b82f6', borderRadius: 4 }]
-          },
-          options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { display: false } } }
+      dataList.forEach(row => {
+            const intStatus = row['ผลสัมภาษณ์'] || 'ไม่ระบุ';
+            const intDateStr = row['วันที่สัมภาษณ์'];
+            if (intDateStr) {
+                let dObj = parseThaiDate(intDateStr);
+                if(dObj && !isNaN(dObj)) {
+                   const dKey = dObj.toISOString().split('T')[0]; // Key: YYYY-MM-DD
+                   if (!chartStats[dKey]) chartStats[dKey] = {};
+                   if (!chartStats[dKey][intStatus]) chartStats[dKey][intStatus] = 0;
+                   chartStats[dKey][intStatus]++;
+                   allStatuses.add(intStatus);
+                }
+            }
+      });
+
+      currentChartSortedDates = Object.keys(chartStats).sort(); // Store globally for click handler
+      const chartLabels = currentChartSortedDates.map(d => formatThaiDateShort(new Date(d)));
+      const uniqueStatuses = Array.from(allStatuses);
+      const colors = ['#198754', '#dc3545', '#0d6efd', '#ffc107', '#0dcaf0', '#6610f2', '#d63384', '#fd7e14', '#20c997']; 
+      
+      const datasets = uniqueStatuses.map((status, index) => {
+            return {
+                label: status,
+                data: currentChartSortedDates.map(d => (chartStats[d] && chartStats[d][status]) ? chartStats[d][status] : 0),
+                backgroundColor: colors[index % colors.length], 
+                borderWidth: 1
+            };
+      });
+
+      const ctxSales = document.getElementById('salesBarChart').getContext('2d');
+      if (salesChartInstance) salesChartInstance.destroy(); 
+
+      salesChartInstance = new Chart(ctxSales, {
+            type: 'bar',
+            data: { labels: chartLabels, datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } },
+                plugins: { legend: { position: 'top' }, tooltip: { mode: 'index', intersect: false } },
+                onClick: (e) => {
+                    const points = salesChartInstance.getElementsAtEventForMode(e, 'nearest', { intersect: true }, true);
+                    if (points.length) {
+                        const index = points[0].index;
+                        const clickedDateKey = currentChartSortedDates[index]; // ได้ Key YYYY-MM-DD
+                        
+                        // Filter Table by Clicked Date (Interview Date)
+                        const filteredByChart = salesFilteredData.filter(row => {
+                            const dObj = parseThaiDate(row['วันที่สัมภาษณ์']);
+                            if(dObj && !isNaN(dObj)) {
+                                return dObj.toISOString().split('T')[0] === clickedDateKey;
+                            }
+                            return false;
+                        });
+                        
+                        // Update UI
+                        renderSalesTable(filteredByChart);
+                        const displayDate = formatThaiDateShort(new Date(clickedDateKey));
+                        document.getElementById('tableFilterStatus').innerText = `กรองวันที่สัมภาษณ์: ${displayDate}`;
+                        document.getElementById('tableFilterStatus').style.display = 'inline-block';
+                        document.getElementById('resetChartFilterBtn').style.display = 'block';
+                    }
+                }
+            }
       });
   }
 
-  /* --- EXPORT --- */
+  function resetChartFilter() {
+      renderSalesTable(salesFilteredData); // Reset to full data
+      document.getElementById('tableFilterStatus').style.display = 'none';
+      document.getElementById('resetChartFilterBtn').style.display = 'none';
+  }
+
+  // --- Function Export Orientation Sheet (New) ---
+  function exportOrientationSheet() {
+      if (!salesFilteredData || salesFilteredData.length === 0) {
+          Swal.fire('แจ้งเตือน', 'ไม่มีข้อมูลให้ Export', 'warning');
+          return;
+      }
+
+      // เตรียมข้อมูลใบรายชื่อ (เน้นเรียบง่ายสำหรับ Print/Sign)
+      // กรองเฉพาะคนที่ "ผ่าน" หรือ "เริ่มงาน" แล้วเท่านั้น (ตาม Logic ใบเซ็นชื่อ)
+      const orientationData = salesFilteredData.filter(row => {
+          const startStatus = row['สถานะเริ่มงาน'] || '';
+          return startStatus.includes('รอเริ่ม') || startStatus.includes('มาเริ่ม');
+      }).map((row, index) => {
+          
+          let roundText = "";
+          const startDateStr = row['วันที่เริ่มงาน'];
+          if (startDateStr) {
+                const sDate = parseThaiDate(startDateStr);
+                const day = sDate.getDate();
+                if (day >= 1 && day <= 16) roundText = "16";
+                else if (day >= 17) roundText = "1";
+          }
+          const storeName = row['Store_Name'] || row['สาขา'] || '-';
+
+          return {
+              "ลำดับ": index + 1,
+              "รหัสสาขา": row['รหัสสาขา'] || '-',
+              "สาขา": storeName,
+              "ชื่อ-นามสกุล": row['ชื่อ-นามสกุล'],
+              "ตำแหน่ง": row['ตำแหน่ง'],
+              "เบอร์โทร": row['เบอร์โทร'] || '-',
+              "วันเริ่มงาน": row['วันที่เริ่มงาน'] || '-',
+              "รอบอบรม": roundText,
+              "ลายมือชื่อ": "" // ช่องว่างสำหรับเซ็น
+          };
+      });
+
+      if (orientationData.length === 0) {
+          Swal.fire('แจ้งเตือน', 'ไม่พบรายชื่อผู้ที่ต้องเข้าอบรม (ต้องมีสถานะ รอเริ่มงาน/มาเริ่มงาน)', 'info');
+          return;
+      }
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(orientationData);
+      
+      // ปรับความกว้างคอลัมน์นิดหน่อย (เท่าที่ Library ฟรีทำได้)
+      const wscols = [
+          {wch: 6}, {wch: 10}, {wch: 20}, {wch: 25}, {wch: 20}, {wch: 15}, {wch: 15}, {wch: 10}, {wch: 20}
+      ];
+      ws['!cols'] = wscols;
+
+      const dateStr = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+      XLSX.utils.book_append_sheet(wb, ws, "Orientation_List");
+      XLSX.writeFile(wb, `Orientation_Sign_Sheet_${dateStr}.xlsx`);
+  }
+
+  // --- Function Export Excel Normal ---
+  function exportSalesSummary() {
+      if (!salesFilteredData || salesFilteredData.length === 0) {
+          Swal.fire('แจ้งเตือน', 'ไม่มีข้อมูลให้ Export (กรุณากดประมวลผลก่อน)', 'warning');
+          return;
+      }
+      
+      const excelData = salesFilteredData.map(row => {
+          let roundText = "";
+          const startStatus = row['สถานะเริ่มงาน'] || '';
+          const startDateStr = row['วันที่เริ่มงาน'];
+          
+          if ((startStatus.includes('รอเริ่ม') || startStatus.includes('มาเริ่ม')) && startDateStr) {
+                const sDate = parseThaiDate(startDateStr);
+                const day = sDate.getDate();
+                if (day >= 1 && day <= 16) roundText = "รอบอบรมวันที่ 16";
+                else if (day >= 17) roundText = "รอบอบรมวันที่ 1";
+          }
+          const storeName = row['Store_Name'] || row['สาขา'] || row['ชื่อสาขา'] || '-';
+
+          return {
+              "วันที่สมัคร": row['วันที่สมัคร'] || '-',
+              "รหัสสาขา": row['รหัสสาขา'] || '-',
+              "ชื่อสาขา": storeName,
+              "ชื่อ-นามสกุล": row['ชื่อ-นามสกุล'],
+              "เบอร์โทร": row['เบอร์โทร'] || '-',
+              "ตำแหน่ง": row['ตำแหน่ง'],
+              "วันที่สัมภาษณ์": row['วันที่สัมภาษณ์'] || '-',
+              "ผลสัมภาษณ์": row['ผลสัมภาษณ์'] || '-',
+              "วันที่เริ่มงาน": row['วันที่เริ่มงาน'] || '-', 
+              "สถานะเริ่มงาน": row['สถานะเริ่มงาน'] || '-',
+              "รอบอบรม (Orientation)": roundText,
+              "หมายเหตุ": row['หมายเหตุ'] || '-'
+          };
+      });
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const dateStr = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+      XLSX.utils.book_append_sheet(wb, ws, "Sales_Summary");
+      XLSX.writeFile(wb, `Sales_Summary_${dateStr}.xlsx`);
+  }
+
+  /* --- EXPORT MAIN REPORT --- */
   async function exportAllDataToExcel(type) {
     Swal.fire({ title: 'กำลังเตรียมไฟล์ Export...', text: 'ระบบกำลังดึงข้อมูลทั้งหมด...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
     try {
